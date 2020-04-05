@@ -1,0 +1,30 @@
+from kafka import KafkaConsumer
+from pymongo import MongoClient
+from json import loads
+
+consumer = KafkaConsumer(
+    'TeslaCar',
+     bootstrap_servers=['localhost:9092'],
+     auto_offset_reset='earliest',
+     enable_auto_commit=True,
+     group_id='my-group',
+     value_deserializer=lambda x: loads(x.decode('utf-8')))
+
+client = MongoClient('localhost:27017')
+collection = client.TeslaCar.csvTestest
+
+for message in consumer:
+    message = message.value
+    collection.insert_one(message)
+    print('{} added to {}'.format(message, collection))
+
+
+consumer = KafkaConsumer(
+    bootstrap_servers='localhost:9081',
+    auto_offset_reset='latest',
+    group_id='test4',
+    consumer_timeout_ms=10000)
+consumer.subscribe('TeslaCar')
+
+for message in consumer:
+    print(message)

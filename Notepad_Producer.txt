@@ -1,0 +1,67 @@
+start broker 
+kafka-topics.bat --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic Tesla
+
+Python script
+
+import tweepy
+import time
+from tweepy import OAuthHandler
+from time import sleep
+from json import dumps
+from kafka import KafkaProducer
+
+#Create Variable contain user credentials to access twtter API
+ACCESS_TOKEN ="200845625-sgsxvWTgRq8ysOSIAIwSOgB2A5qXWg8RxVYEoN3H"
+ACCESS_TOKEN_SECRET ="Shbr0rY0JsQJqJKellTBsTBJFfDqP7qfuXUIYNnFADluO"
+CONSUMER_KEY ="A2uY5HdVOBcc0S6tz7kiexX5k"
+CONSUMER_SECRET ="trU5jfOMJXGbpgKLlWU9vl6e1unhVimN9X726zsPLhjw1Z4Thw"
+
+auth: OAuthHandler = OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
+auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+api = tweepy.API(auth)
+
+from datetime import datetime, timedelta
+def normalize_timestamp(time):
+    mytime = datetime.strftime(time, "%Y-%m-%d %H:%M:%S")
+    mytime += timedelta(hours=1)
+    return (mytime.strfttime("%Y-%m-%d %H:%M:%S"))
+
+
+
+producer = KafkaProducer(bootstrap_servers=['localhost:9092'],
+                         value_serializer=lambda x: 
+                         dumps(x).encode('utf-8'))
+						 topic_name = 'TeslaCar'
+
+def get_twitter_data():
+    res = api.search('Apple or iphone or iPhone')
+    for i in res:
+        record = ''
+        record += str(i.user.id_str)
+        record = ';'
+        record += str(normalize_timestamp(str(i.created_at)))
+        record = ';'
+        record += str(i.user.followers_count)
+        record = ';'
+        record += str(i.user.location)
+        record = ';'
+        record += str(i.favorite_count)
+        record = ';'
+        record += str(i.retweet_coount)
+        record = ';'
+        producer.send(topic_name, str.encode(record))
+        get_twitter_data()
+
+
+for e in range(1000):
+    data = {'number' : e}
+    producer.send('TeslaCar', value=data)
+    sleep(5)
+	
+def periodic_work(interval):
+    while True:
+        get_twitter_data()
+        time.sleep(5)
+
+
+
